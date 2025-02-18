@@ -106,73 +106,78 @@ class _InsertPenjualanAdminState extends State<insertpenjualan> {
   }
 
   Future<void> SubmitPenjualan() async {
-    if (pilihPelanggan == null) {
-      _showDialog('Pilih pelanggan terlebih dahulu!', Colors.brown.shade800);
-      return;
-    }
-
-    if (produkDipesan.isEmpty) {
-      _showDialog('Pesanan tidak boleh kosong!', Colors.brown.shade800);
-      return;
-    }
-
-    try {
-      final penjualanResponse = await Supabase.instance.client
-          .from('penjualan')
-          .insert({
-            'TanggalPenjualan': DateFormat('yyyy-MM-dd').format(currentDate),
-            'TotalHarga': totalHarga,
-            'PelangganID': pilihPelanggan!['PelangganID']
-          })
-          .select()
-          .single();
-
-      if (penjualanResponse == null) {
-        _showDialog('Gagal menyimpan transaksi', Colors.brown.shade800);
-        return;
-      }
-
-      final PenjualanID = penjualanResponse['PenjualanID'];
-
-      for (var produkItem in produkDipesan) {
-        await Supabase.instance.client.from('detailpenjualan').insert({
-          'PenjualanID': PenjualanID,
-          'ProdukID': produkItem['ProdukID'],
-          'JumlahProduk': produkItem['Jumlah'],
-          'Subtotal': produkItem['Subtotal']
-        });
-
-        // Mengupdate stok produk dengan mengurangi jumlah produk yang dibeli
-        await Supabase.instance.client.from('produk').update({
-          'Stok': produkItem['Stok'] - produkItem['Jumlah']
-        }).eq('ProdukID', produkItem['ProdukID']);
-      }
-
-      ScaffoldMessenger.of(context).showSnackBar(SnackBar(
-        content: Text('Transaksi berhasil disimpan'),
-        backgroundColor: Colors.brown[300],
-      ));
-
-      setState(() {
-        totalHarga = 0;
-        produkDipesan.clear();
-      });
-
-      // Kembali ke IndexPenjualan setelah berhasil
-      Navigator.pushReplacement(
-        context,
-        MaterialPageRoute(builder: (context) => IndexPenjualan()),
-      ).then((value) {
-        // Panggil kembali fetchPenjualan untuk refresh data
-        fetchPenjualan();
-      });
-    } catch (e) {
-      ScaffoldMessenger.of(context).showSnackBar(SnackBar(
-        content: Text('Terjadi kesalahan: $e'),
-        backgroundColor: Colors.brown[300],
-      ));
-    }
+  if (pilihPelanggan == null) {
+    _showDialog('Pilih pelanggan terlebih dahulu!', Colors.brown.shade800);
+    return;
   }
+
+  if (produkDipesan.isEmpty) {
+    _showDialog('Pesanan tidak boleh kosong!', Colors.brown.shade800);
+    return;
+  }
+
+  print('Data yang akan disimpan:');
+  print('Pelanggan: ${pilihPelanggan}');
+  print('Produk: ${produkDipesan}');
+  print('Total Harga: $totalHarga');
+
+  try {
+    final penjualanResponse = await Supabase.instance.client
+        .from('penjualan')
+        .insert({
+          'TanggalPenjualan': DateFormat('yyyy-MM-dd').format(currentDate),
+          'TotalHarga': totalHarga,
+          'PelangganID': pilihPelanggan!['PelangganID']
+        })
+        .select()
+        .single();
+
+    if (penjualanResponse == null) {
+      _showDialog('Gagal menyimpan transaksi', Colors.brown.shade800);
+      return;
+    }
+
+    final PenjualanID = penjualanResponse['PenjualanID'];
+
+    for (var produkItem in produkDipesan) {
+      await Supabase.instance.client.from('detailpenjualan').insert({
+        'PenjualanID': PenjualanID,
+        'ProdukID': produkItem['ProdukID'],
+        'JumlahProduk': produkItem['Jumlah'],
+        'Subtotal': produkItem['Subtotal']
+      });
+
+      // Mengupdate stok produk dengan mengurangi jumlah produk yang dibeli
+      await Supabase.instance.client.from('produk').update({
+        'Stok': produkItem['Stok'] - produkItem['Jumlah']
+      }).eq('ProdukID', produkItem['ProdukID']);
+    }
+
+    ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+      content: Text('Transaksi berhasil disimpan'),
+      backgroundColor: Colors.brown[300],
+    ));
+
+    setState(() {
+      totalHarga = 0;
+      produkDipesan.clear();
+    });
+
+    // Kembali ke IndexPenjualan setelah berhasil
+    Navigator.pushReplacement(
+      context,
+      MaterialPageRoute(builder: (context) => IndexPenjualan()),
+    ).then((value) {
+      fetchPenjualan();
+    });
+  } catch (e) {
+    ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+      content: Text('Terjadi kesalahan: $e'),
+      backgroundColor: Colors.brown[300],
+    ));
+  }
+}
+
 
   @override
   Widget build(BuildContext context) {
